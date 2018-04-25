@@ -12,11 +12,15 @@ This repository contains my notes & solutions to the assignments.
 * To run the container:
 
     ```
-    docker run -p 9999:8888 --name CS_231n -v ~/github/my_CS231n/:/app datascience
+    docker run -p 9999:8888 --name CS231n -v ~/github/my_CS231n/:/app/data cs231n
     ```
+
+    where `cs231n` is the name of my Docker image.
 
 * To restart the container after it has shut down:
 
     ```
-    docker start -ia CS_231n
+    docker start -ia CS231n
     ```
+
+    where `CS231n` is the name of my Docker container.
