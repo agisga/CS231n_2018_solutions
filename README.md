@@ -1,7 +1,8 @@
 # Stanford CS231n Convolutional Neural Networks for Visual Recognition
 
 * Course website: <https://cs231n.github.io/>
-* Assignment 1 (2018): <https://cs231n.github.io/assignments2018/assignment1/>
+* Assignment 1 (Spring 2018): <https://cs231n.github.io/assignments2018/assignment1/>
+* Assignment 2 (Spring 2018): <https://cs231n.github.io/assignments2018/assignment2/>
 
 This repository contains my notes & solutions to the assignments.
 
