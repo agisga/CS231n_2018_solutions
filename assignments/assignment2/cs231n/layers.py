@@ -25,7 +25,8 @@ def affine_forward(x, w, b):
     # TODO: Implement the affine forward pass. Store the result in out. You   #
     # will need to reshape the input into rows.                               #
     ###########################################################################
-    pass
+    n = x.shape[0]
+    out = x.reshape((n, -1)) @ w + b
     ###########################################################################
     #                             END OF YOUR CODE                            #
     ###########################################################################
@@ -54,7 +55,12 @@ def affine_backward(dout, cache):
     ###########################################################################
     # TODO: Implement the affine backward pass.                               #
     ###########################################################################
-    pass
+    n, m = dout.shape
+
+    dx = dout @ w.T
+    dx = dx.reshape(x.shape)
+    dw = x.reshape((n, -1)).T @ dout
+    db = dout.sum(axis=0)
     ###########################################################################
     #                             END OF YOUR CODE                            #
     ###########################################################################
@@ -76,7 +82,7 @@ def relu_forward(x):
     ###########################################################################
     # TODO: Implement the ReLU forward pass.                                  #
     ###########################################################################
-    pass
+    out = np.maximum(x, 0)
     ###########################################################################
     #                             END OF YOUR CODE                            #
     ###########################################################################
@@ -99,7 +105,8 @@ def relu_backward(dout, cache):
     ###########################################################################
     # TODO: Implement the ReLU backward pass.                                 #
     ###########################################################################
-    pass
+    dx_local = (x > 0).astype('float')
+    dx = dout * dx_local
     ###########################################################################
     #                             END OF YOUR CODE                            #
     ###########################################################################
@@ -171,7 +178,7 @@ def batchnorm_forward(x, gamma, beta, bn_param):
         #                                                                     #
         # Note that though you should be keeping track of the running         #
         # variance, you should normalize the data based on the standard       #
-        # deviation (square root of variance) instead!                        # 
+        # deviation (square root of variance) instead!                        #
         # Referencing the original paper (https://arxiv.org/abs/1502.03167)   #
         # might prove to be helpful.                                          #
         #######################################################################
@@ -238,9 +245,9 @@ def batchnorm_backward_alt(dout, cache):
 
     For this implementation you should work out the derivatives for the batch
     normalizaton backward pass on paper and simplify as much as possible. You
-    should be able to derive a simple expression for the backward pass. 
+    should be able to derive a simple expression for the backward pass.
     See the jupyter notebook for more hints.
-     
+
     Note: This implementation should expect to receive the same cache variable
     as batchnorm_backward, but might not use all of the values in the cache.
 
@@ -267,12 +274,13 @@ def layernorm_forward(x, gamma, beta, ln_param):
     """
     Forward pass for layer normalization.
 
-    During both training and test-time, the incoming data is normalized per data-point,
-    before being scaled by gamma and beta parameters identical to that of batch normalization.
-    
-    Note that in contrast to batch normalization, the behavior during train and test-time for
-    layer normalization are identical, and we do not need to keep track of running averages
-    of any sort.
+    During both training and test-time, the incoming data is normalized per
+    data-point, before being scaled by gamma and beta parameters identical to
+    that of batch normalization.
+
+    Note that in contrast to batch normalization, the behavior during train and
+    test-time for layer normalization are identical, and we do not need to keep
+    track of running averages of any sort.
 
     Input:
     - x: Data of shape (N, D)
@@ -308,8 +316,8 @@ def layernorm_backward(dout, cache):
     """
     Backward pass for layer normalization.
 
-    For this implementation, you can heavily rely on the work you've done already
-    for batch normalization.
+    For this implementation, you can heavily rely on the work you've done
+    already for batch normalization.
 
     Inputs:
     - dout: Upstream derivatives, of shape (N, D)
@@ -354,8 +362,9 @@ def dropout_forward(x, dropout_param):
     - cache: tuple (dropout_param, mask). In training mode, mask is the dropout
       mask that was used to multiply the input; in test mode, mask is None.
 
-    NOTE: Please implement **inverted** dropout, not the vanilla version of dropout.
-    See http://cs231n.github.io/neural-networks-2/#reg for more details.
+    NOTE: Please implement **inverted** dropout, not the vanilla version of
+    dropout.  See http://cs231n.github.io/neural-networks-2/#reg for more
+    details.
 
     NOTE 2: Keep in mind that p is the probability of **keep** a neuron
     output; this might be contrary to some sources, where it is referred to
@@ -432,12 +441,11 @@ def conv_forward_naive(x, w, b, conv_param):
     - conv_param: A dictionary with the following keys:
       - 'stride': The number of pixels between adjacent receptive fields in the
         horizontal and vertical directions.
-      - 'pad': The number of pixels that will be used to zero-pad the input. 
-        
+      - 'pad': The number of pixels that will be used to zero-pad the input.
 
-    During padding, 'pad' zeros should be placed symmetrically (i.e equally on both sides)
-    along the height and width axes of the input. Be careful not to modfiy the original
-    input x directly.
+    During padding, 'pad' zeros should be placed symmetrically (i.e equally on
+    both sides) along the height and width axes of the input. Be careful not to
+    modfiy the original input x directly.
 
     Returns a tuple of:
     - out: Output data, of shape (N, F, H', W') where H' and W' are given by
@@ -493,7 +501,7 @@ def max_pool_forward_naive(x, pool_param):
       - 'pool_width': The width of each pooling region
       - 'stride': The distance between adjacent pooling regions
 
-    No padding is necessary here. Output size is given by 
+    No padding is necessary here. Output size is given by
 
     Returns a tuple of:
     - out: Output data, of shape (N, C, H', W') where H' and W' are given by
@@ -607,9 +615,11 @@ def spatial_batchnorm_backward(dout, cache):
 def spatial_groupnorm_forward(x, gamma, beta, G, gn_param):
     """
     Computes the forward pass for spatial group normalization.
-    In contrast to layer normalization, group normalization splits each entry 
-    in the data into G contiguous pieces, which it then normalizes independently.
-    Per feature shifting and scaling are then applied to the data, in a manner identical to that of batch normalization and layer normalization.
+    In contrast to layer normalization, group normalization splits each entry
+    in the data into G contiguous pieces, which it then normalizes
+    independently.  Per feature shifting and scaling are then applied to the
+    data, in a manner identical to that of batch normalization and layer
+    normalization.
 
     Inputs:
     - x: Input data of shape (N, C, H, W)
@@ -624,13 +634,13 @@ def spatial_groupnorm_forward(x, gamma, beta, G, gn_param):
     - cache: Values needed for the backward pass
     """
     out, cache = None, None
-    eps = gn_param.get('eps',1e-5)
+    eps = gn_param.get('eps', 1e-5)
     ###########################################################################
     # TODO: Implement the forward pass for spatial group normalization.       #
     # This will be extremely similar to the layer norm implementation.        #
     # In particular, think about how you could transform the matrix so that   #
     # the bulk of the code is similar to both train-time batch normalization  #
-    # and layer normalization!                                                # 
+    # and layer normalization!                                                #
     ###########################################################################
     pass
     ###########################################################################
