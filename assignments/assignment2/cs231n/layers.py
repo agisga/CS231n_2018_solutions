@@ -182,7 +182,20 @@ def batchnorm_forward(x, gamma, beta, bn_param):
         # Referencing the original paper (https://arxiv.org/abs/1502.03167)   #
         # might prove to be helpful.                                          #
         #######################################################################
-        pass
+        batch_mean = x.mean(axis=0)
+        batch_var = x.var(axis=0)
+        batch_sd = np.sqrt(batch_var + eps)
+        x_standardized = (x - batch_mean) / batch_sd
+        out = x_standardized * gamma + beta
+
+        running_mean = momentum * running_mean + (1 - momentum) * batch_mean
+        running_var = momentum * running_var + (1 - momentum) * batch_var
+
+        cache = {'x': x,
+                 'x_standardized': x_standardized,
+                 'gamma': gamma,
+                 'batch_mean': batch_mean,
+                 'batch_sd': batch_sd}
         #######################################################################
         #                           END OF YOUR CODE                          #
         #######################################################################
@@ -193,7 +206,8 @@ def batchnorm_forward(x, gamma, beta, bn_param):
         # then scale and shift the normalized data using gamma and beta.      #
         # Store the result in the out variable.                               #
         #######################################################################
-        pass
+        x_standardized = (x - running_mean) / np.sqrt(running_var + eps)
+        out = x_standardized * gamma + beta
         #######################################################################
         #                          END OF YOUR CODE                           #
         #######################################################################
@@ -231,7 +245,30 @@ def batchnorm_backward(dout, cache):
     # Referencing the original paper (https://arxiv.org/abs/1502.03167)       #
     # might prove to be helpful.                                              #
     ###########################################################################
-    pass
+    N = dout.shape[0]
+    D = dout.shape[1]
+    x = cache['x']
+    x_standardized = cache['x_standardized']
+    gamma = cache['gamma']
+    x_mean = cache['batch_mean']
+    s = cache['batch_sd']
+
+    dbeta = np.sum(dout, axis=0)
+    dgamma = np.sum(dout * x_standardized, axis=0)
+
+    # For clarity we compute the derivatives separately
+    # for each column of x; i.e., separately for each feature.
+    # A picture with the backprop derivations is
+    # attached in the jupyter notebook.
+    dx = np.empty_like(x)
+    for i in range(D):
+        DxmeanDx = (1 / N) * np.ones(N)
+        DsDx = (1 / (N * s[i])) * (x[:, i] - x_mean[i])
+        DxstandardizedDx = (
+            (-1 / (s[i] ** 2)) * (x[:, i] - x_mean[i]).reshape((N, 1)) * DsDx +
+            (1 / s[i]) * (np.identity(N) - DxmeanDx))
+        DoutDx = gamma[i] * DxstandardizedDx
+        dx[:, i] = dout[:, i] @ DoutDx
     ###########################################################################
     #                             END OF YOUR CODE                            #
     ###########################################################################
@@ -262,7 +299,17 @@ def batchnorm_backward_alt(dout, cache):
     # should be able to compute gradients with respect to the inputs in a     #
     # single statement; our implementation fits on a single 80-character line.#
     ###########################################################################
-    pass
+    N = dout.shape[0]
+    x_standardized = cache['x_standardized']
+    gamma = cache['gamma']
+    s = cache['batch_sd']
+
+    # This is a condensed version of the for loop in `batchnorm_backward`
+    dx = gamma * (
+        np.sum(-dout * x_standardized / s, axis=0) * x_standardized / N +
+        (-np.sum(dout, axis=0) / N + dout) / s)
+    dbeta = np.sum(dout, axis=0)
+    dgamma = np.sum(dout * x_standardized, axis=0)
     ###########################################################################
     #                             END OF YOUR CODE                            #
     ###########################################################################
@@ -305,7 +352,17 @@ def layernorm_forward(x, gamma, beta, ln_param):
     # transformations you could perform, that would enable you to copy over   #
     # the batch norm code and leave it almost unchanged?                      #
     ###########################################################################
-    pass
+    N = x.shape[0]
+    x_mean = x.mean(axis=1)
+    x_var = x.var(axis=1)
+    x_sd = np.sqrt(x_var + eps)
+    x_standardized = (x - x_mean.reshape((N, 1))) / x_sd.reshape((N, 1))
+    out = x_standardized * gamma + beta
+
+    cache = {'x': x,
+             'x_standardized': x_standardized,
+             'gamma': gamma,
+             'x_sd': x_sd}
     ###########################################################################
     #                             END OF YOUR CODE                            #
     ###########################################################################
@@ -336,7 +393,27 @@ def layernorm_backward(dout, cache):
     # implementation of batch normalization. The hints to the forward pass    #
     # still apply!                                                            #
     ###########################################################################
-    pass
+
+    x_standardized = cache['x_standardized']
+    gamma = cache['gamma']
+    s = cache['x_sd']
+
+    # Layer norm is kind of like batch norm applied to x transposed...
+    # However, the rescaling with gamma and shifting with beta is
+    # the same as in batchnorm...
+    # ...See batchnorm_backward and batchnorm_backward_alt
+    # for the origin of the following code.
+
+    dbeta = np.sum(dout, axis=0)
+    dgamma = np.sum(dout * x_standardized, axis=0)
+
+    D = dout.shape[1]
+    gdout = (gamma * dout).T
+    x_std_t = x_standardized.T
+    dx = (
+        np.sum(-gdout * x_std_t / s, axis=0) * x_std_t / D +
+        (-np.sum(gdout, axis=0) / D + gdout) / s)
+    dx = dx.T
     ###########################################################################
     #                             END OF YOUR CODE                            #
     ###########################################################################
