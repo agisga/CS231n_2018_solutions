@@ -58,7 +58,6 @@ class TwoLayerNet(object):
         #                             END OF YOUR CODE                       #
         ######################################################################
 
-
     def loss(self, X, y=None):
         """
         Compute loss and gradient for a minibatch of data.
@@ -68,15 +67,16 @@ class TwoLayerNet(object):
         - y: Array of labels, of shape (N,). y[i] gives the label for X[i].
 
         Returns:
-        If y is None, then run a test-time forward pass of the model and return:
+        If y is None then run a test-time forward pass of the model and return:
         - scores: Array of shape (N, C) giving classification scores, where
           scores[i, c] is the classification score for X[i] and class c.
 
-        If y is not None, then run a training-time forward and backward pass and
+        If y is not None then run a training-time forward and backward pass and
         return a tuple of:
         - loss: Scalar value giving the loss
-        - grads: Dictionary with the same keys as self.params, mapping parameter
-          names to gradients of the loss with respect to those parameters.
+        - grads: Dictionary with the same keys as self.params, mapping
+          parameter names to gradients of the loss with respect to those
+          parameters.
         """
         scores = None
         #####################################################################
@@ -127,13 +127,13 @@ class FullyConnectedNet(object):
     """
     A fully-connected neural network with an arbitrary number of hidden layers,
     ReLU nonlinearities, and a softmax loss function. This will also implement
-    dropout and batch/layer normalization as options. For a network with L layers,
-    the architecture will be
+    dropout and batch/layer normalization as options. For a network with L
+    layers, the architecture will be
 
     {affine - [batch/layer norm] - relu - [dropout]} x (L - 1) - affine - softmax
 
-    where batch/layer normalization and dropout are optional, and the {...} block is
-    repeated L - 1 times.
+    where batch/layer normalization and dropout are optional, and the {...}
+    block is repeated L - 1 times.
 
     Similar to the TwoLayerNet above, learnable parameters are stored in the
     self.params dictionary and will be learned using the Solver class.
@@ -151,17 +151,18 @@ class FullyConnectedNet(object):
         - num_classes: An integer giving the number of classes to classify.
         - dropout: Scalar between 0 and 1 giving dropout strength. If dropout=1
           then the network should not use dropout at all.
-        - normalization: What type of normalization the network should use. Valid values
-          are "batchnorm", "layernorm", or None for no normalization (the default).
+        - normalization: What type of normalization the network should use.
+          Valid values are "batchnorm", "layernorm", or None for no
+          normalization (the default).
         - reg: Scalar giving L2 regularization strength.
         - weight_scale: Scalar giving the standard deviation for random
           initialization of the weights.
-        - dtype: A numpy datatype object; all computations will be performed using
-          this datatype. float32 is faster but less accurate, so you should use
-          float64 for numeric gradient checking.
-        - seed: If not None, then pass this random seed to the dropout layers. This
-          will make the dropout layers deteriminstic so we can gradient check the
-          model.
+        - dtype: A numpy datatype object; all computations will be performed
+          using this datatype. float32 is faster but less accurate, so you
+          should use float64 for numeric gradient checking.
+        - seed: If not None, then pass this random seed to the dropout
+          layers. This will make the dropout layers deteriminstic so we can
+          gradient check the model.
         """
         self.normalization = normalization
         self.use_dropout = dropout != 1
@@ -225,15 +226,15 @@ class FullyConnectedNet(object):
         # self.bn_params[1] to the forward pass of the second batch
         # normalization layer, etc.
         self.bn_params = []
-        if self.normalization=='batchnorm':
-            self.bn_params = [{'mode': 'train'} for i in range(self.num_layers - 1)]
-        if self.normalization=='layernorm':
+        if self.normalization == 'batchnorm':
+            self.bn_params = [{'mode': 'train'} for i in
+                              range(self.num_layers - 1)]
+        if self.normalization == 'layernorm':
             self.bn_params = [{} for i in range(self.num_layers - 1)]
 
         # Cast all parameters to the correct datatype
         for k, v in self.params.items():
             self.params[k] = v.astype(dtype)
-
 
     def loss(self, X, y=None):
         """
@@ -262,7 +263,8 @@ class FullyConnectedNet(object):
         # normalization layer, pass self.bn_params[1] to the              #
         # forward pass for the second batch normalization layer, etc.     #
         ###################################################################
-        cache = [None] * self.num_layers
+        cache = [None] * self.num_layers  # for all layers but dropout
+        dropout_cache = [None] * self.num_layers  # for dropout layers
         activations = [None] * self.num_layers
         activations[0] = X
 
@@ -278,7 +280,12 @@ class FullyConnectedNet(object):
                 args += [self.params['gamma' + str(i)],
                          self.params['beta' + str(i)],
                          self.bn_params[i-1]]
-            activations[i], cache[i] = forward(*args)
+            if self.use_dropout:
+                a, cache[i] = forward(*args)
+                activations[i], dropout_cache[i] = \
+                    dropout_forward(a, self.dropout_param)
+            else:
+                activations[i], cache[i] = forward(*args)
 
         last_layer_ind = str(self.num_layers)
         scores, cache_scores = affine_forward(
@@ -315,6 +322,8 @@ class FullyConnectedNet(object):
         for i in range(self.num_layers-1, 0, -1):
             Wi = 'W' + str(i)
             bi = 'b' + str(i)
+            if self.use_dropout:
+                dx = dropout_backward(dx, dropout_cache[i])
             if self.normalization == 'batchnorm':
                 gammai = 'gamma' + str(i)
                 betai = 'beta' + str(i)
