@@ -7,6 +7,8 @@
 
 This repository contains my notes & solutions to the assignments.
 
+*Please note that I was not enrolled for the course and my solution was not submitted, checked or graded.*
+
 ## Docker
 
 * I run the assignments using a Docker container.
@@ -26,7 +28,7 @@ This repository contains my notes & solutions to the assignments.
         ```
 
         where `CS231n` is the name of my Docker container.
-* For problems that use PyTorch I either use [this Dockerfile](https://github.com/agisga/dockerfiles/blob/master/PyTorch-jupyter/Dockerfile) locally, or work on AWS (see below).
+* For problems that use PyTorch I either use [this Dockerfile](https://github.com/agisga/dockerfiles/blob/master/PyTorch-jupyter/Dockerfile) locally, or work on AWS without Docker (see below).
 
 ## AWS
 
