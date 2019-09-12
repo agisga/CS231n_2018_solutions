@@ -140,7 +140,20 @@ class CaptioningRNN(object):
         # Note also that you are allowed to make use of functions from layers.py   #
         # in your implementation, if needed.                                       #
         ############################################################################
-        pass
+        h0 = features @ W_proj + b_proj
+        x, cache_x = word_embedding_forward(captions_in, W_embed)
+        if self.cell_type == 'rnn':
+            h, cache_h = rnn_forward(x, h0, Wx, Wh, b)
+        if self.cell_type == 'lstm':
+            raise NotImplementedError
+        y, cache_y = temporal_affine_forward(h, W_vocab, b_vocab)
+        loss, dy = temporal_softmax_loss(y, captions_out, mask)
+
+        dh, grads['W_vocab'], grads['b_vocab'] = temporal_affine_backward(dy, cache_y)
+        dx, dh0, grads['Wx'], grads['Wh'], grads['b'] = rnn_backward(dh, cache_h)
+        grads['W_embed'] = word_embedding_backward(dx, cache_x)
+        grads['W_proj'] = features.T.dot(dh0)
+        grads['b_proj'] = dh0.sum(axis=0)
         ############################################################################
         #                             END OF YOUR CODE                             #
         ############################################################################
@@ -205,7 +218,18 @@ class CaptioningRNN(object):
         # NOTE: we are still working over minibatches in this function. Also if   #
         # you are using an LSTM, initialize the first cell state to zeros.        #
         ###########################################################################
-        pass
+        captions[:, 0] = self._start
+        h_prev = features @ W_proj + b_proj
+        x, _ = word_embedding_forward(captions[:, 0].reshape((-1, 1)), W_embed)
+        for i in range(1, max_length):
+            if self.cell_type == 'rnn':
+                h, _ = rnn_forward(x, h_prev, Wx, Wh, b)
+            if self.cell_type == 'lstm':
+                raise NotImplementedError
+            y, _ = temporal_affine_forward(h, W_vocab, b_vocab)
+            captions[:, i] = np.argmax(y, axis=2).ravel()
+            h_prev = h.squeeze()  # h has size (N, 1, H); rnn_forward takes in h0 of size (N, H)
+            x, _ = word_embedding_forward(captions[:, i].reshape((-1, 1)), W_embed)
         ############################################################################
         #                             END OF YOUR CODE                             #
         ############################################################################
